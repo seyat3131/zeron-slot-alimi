@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZERON ORG. Slot Kayıt</title>
+    <!-- Tailwind CSS ve Inter Font -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d0d0d; 
+            color: #e5e7eb; 
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px; 
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+        .logo-box {
+            background-color: #e20000; 
+            padding: 8px; 
+            border-radius: 8px; 
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 8px; 
+        }
+        
+        /* Slot Grid Tanımı: 5x5 matris için CSS */
+        .slot-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr)); 
+            gap: 12px; 
+        }
+        @media (min-width: 640px) { /* sm: breakpoint */
+            .slot-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+        @media (min-width: 768px) { /* md: breakpoint */
+            .slot-grid {
+                grid-template-columns: repeat(5, minmax(0, 1fr)); /* 5 sütun */
+            }
+        }
+        
+        /* Slot Kartının Temaya Uygun Stil ve Boyutu */
+        .slot-card {
+            background-color: #1a1a1a;
+            border: 1px solid #333333; 
+            border-radius: 8px; 
+            padding: 16px 8px; 
+            height: 85px; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            line-height: 1.2; 
+        }
+        .slot-card:hover:not(.slot-reserved) {
+            background-color: #222222;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
+        }
+        .slot-reserved {
+            background-color: #440000; 
+            cursor: not-allowed;
+            opacity: 0.9;
+            border-color: #550000;
+        }
+        
+        .slot-id {
+            color: #d1d5db;
+            font-size: 14px; 
+            font-weight: 600;
+        }
+        .slot-action {
+            color: #888888; 
+            font-size: 10px; 
+            font-weight: 600;
+            margin-top: 2px;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Geri Sayım Kutusu Stili */
+        #countdown-box {
+            background-color: #181818; 
+            border: 1px solid #333;
+            padding: 6px 12px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Modal Stili */
+        #modal-container .bg-neutral-900 {
+            background-color: #181818;
+            border-color: #333;
+        }
+        .header-red {
+            background-color: #e20000;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center p-4 sm:p-8">
+
+    <!-- Başlık ve Geri Sayım Alanı -->
+    <header class="w-full container flex flex-col sm:flex-row justify-between items-center py-6 border-b border-neutral-800 mb-8">
+        <div class="flex items-center space-x-2 mb-4 sm:mb-0">
+            <div class="logo-box">
+                <!-- SVG Logo -->
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16z" fill="#f0f0f0" opacity="0.15"/>
+                    <path d="M12 4a8 8 0 0 0-8 8h1.5a6.5 6.5 0 0 1 13 0h1.5a8 8 0 0 0-8-8z" fill="#f0f0f0"/>
+                    <path d="M12 20a8 8 0 0 0 8-8h-1.5a6.5 6.5 0 0 1-13 0H4a8 8 0 0 0 8 8z" fill="#f0f0f0"/>
+                    <circle cx="12" cy="12" r="2" fill="#f0f0f0"/>
+                </svg>
+            </div>
+            <h1 class="text-3xl font-extrabold text-neutral-100">ZERON ORG.</h1>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div class="text-xs text-neutral-400">SIFIRLANMAYA</div>
+            <!-- Geri Sayım Kutusu - Başlangıçta Görünür Olmalı -->
+            <div id="countdown-box" class="font-bold">
+                <span id="countdown" class="text-lg text-neutral-100">--:--:--</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Uyarı Mesajı -->
+    <div id="alert-message" class="w-full container bg-neutral-800 border border-neutral-700 text-neutral-200 px-4 py-3 rounded-lg mb-8 transition-all duration-300" role="alert">
+        <div class="flex items-start">
+            <svg class="w-5 h-5 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.4 2.822-1.4 3.587 0l4.406 8.015c.764 1.399-.184 3.186-1.793 3.186H5.644c-1.609 0-2.558-1.787-1.793-3.186l4.406-8.015zM10 15a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"></path></svg>
+            <span id="alert-text" class="text-sm font-medium">🔔 Her takım günde sadece 1 SLOT alabilir. Slotlar gece 00:00'da sıfırlanır. Hemen kaydol!</span>
+        </div>
+    </div>
+
+    <!-- Slot Izgarası (Statik Olarak Eklendi) -->
+    <main class="w-full container mx-auto">
+        <div id="slot-grid" class="slot-grid">
+            <!-- Loading Indicator -->
+            <div class="text-neutral-400 p-8 col-span-full text-center" id="loading-indicator">Slotlar yükleniyor...</div>
+            
+            <!-- 25 Adet Statik Slot Kartı (JS sadece bu kartları güncelleyecek) -->
+            <!-- Döngü başlangıcı -->
+            <div id="slot-1" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 1</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-2" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 2</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-3" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 3</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-4" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 4</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-5" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 5</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-6" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 6</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-7" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 7</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-8" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 8</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-9" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 9</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-10" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 10</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-11" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 11</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-12" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 12</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-13" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 13</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-14" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 14</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-15" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 15</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-16" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 16</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-17" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 17</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-18" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 18</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-19" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 19</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-20" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 20</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-21" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 21</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-22" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 22</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-23" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 23</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-24" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 24</div><div class="slot-action slot-info">TIKLA</div></div>
+            <div id="slot-25" class="slot-card hover:scale-[1.02]"><div class="slot-id">SLOT 25</div><div class="slot-action slot-info">TIKLA</div></div>
+            <!-- Döngü sonu -->
+        </div>
+    </main>
+
+    <!-- Modal (Slot Kayıt Formu) -->
+    <div id="modal-container" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-neutral-900 p-0 rounded-xl shadow-2xl w-full max-w-sm border border-neutral-700 overflow-hidden">
+            <div class="header-red flex justify-between items-center px-6 py-4">
+                 <h3 id="modal-title" class="text-xl font-bold text-white">SLOT ALINIYOR</h3>
+                <button id="modal-close" class="text-white hover:text-neutral-200 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <form id="slot-form" class="p-6">
+                <div class="mb-4">
+                    <label for="team-name" class="block text-sm font-medium text-neutral-400 mb-1">TAKIM İSMİ</label>
+                    <div class="relative">
+                        <input type="text" id="team-name" placeholder="takımınızın adı" required class="w-full bg-neutral-800 border-neutral-700 text-white p-3 rounded-lg outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600">
+                    </div>
+                </div>
+                <div class="mb-6">
+                    <label for="instagram" class="block text-sm font-medium text-neutral-400 mb-1">INSTAGRAM HESABI</label>
+                    <div class="relative">
+                        <input type="text" id="instagram" placeholder="@kullaniciadi" required class="w-full bg-neutral-800 border-neutral-700 text-white p-3 rounded-lg outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600">
+                    </div>
+                </div>
+                <button type="submit" id="submit-button" class="w-full bg-red-600 text-white font-bold p-3 rounded-lg hover:bg-red-700 transition disabled:bg-neutral-700 disabled:text-neutral-400">SLOTU AL</button>
+                <button type="button" id="form-cancel" class="mt-3 w-full bg-neutral-700 text-neutral-200 font-bold p-3 rounded-lg hover:bg-neutral-600 transition">İPTAL</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Firebase ve Uygulama Betiği -->
+    <script type="module">
+        // Firebase Modüllerini Import Et
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, Timestamp, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // setLogLevel('debug'); // HATA AYIKLAMA İÇİN AÇILDI
+
+        // Firebase ve Canvas Ortam Değişkenleri
+        let app, db, auth;
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-zeron-app-id';
+
+        // UI Elementleri
+        let slotGrid, modalContainer, modalTitle, modalClose, slotForm, formCancel, countdownElement, alertMessage, alertText, loadingIndicator;
+        
+        // State
+        let currentSlotId = null;
+        let authIsReady = false;
+        let currentUserId = null;
+        let userLastRegistrationTime = null; 
+
+        // Sabitler
+        const NUM_SLOTS = 25; 
+        const COLLECTION_NAME = 'slots';
+
+        /**
+         * Uygulama Başlangıç Fonksiyonu (DOM tamamen yüklendikten sonra çalışır)
+         */
+        function main() {
+            // UI Elementlerini al
+            countdownElement = document.getElementById('countdown'); // Sayfa yüklenir yüklenmez geri sayımı başlat
+            updateCountdown();
+            setInterval(updateCountdown, 1000);
+
+            // Geri kalan UI elementleri
+            slotGrid = document.getElementById('slot-grid');
+            modalContainer = document.getElementById('modal-container');
+            modalTitle = document.getElementById('modal-title');
+            modalClose = document.getElementById('modal-close');
+            slotForm = document.getElementById('slot-form');
+            formCancel = document.getElementById('form-cancel');
+            alertMessage = document.getElementById('alert-message');
+            alertText = document.getElementById('alert-text');
+            loadingIndicator = document.getElementById('loading-indicator');
+
+            // Firebase Başlatma
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+            } catch (e) {
+                console.error("Firebase başlatılamadı:", e);
+                if(loadingIndicator) loadingIndicator.textContent = "Hata: Sunucu bağlantısı kurulamadı.";
+                return;
+            }
+
+            // Olay Dinleyicilerini Kur
+            setupEventListeners();
+            
+            // Auth ve Veri İzleme Başlat
+            setupAuthAndDataListeners();
+        }
+
+        // --- Firebase ve Kullanıcı Yönetimi ---
+
+        function setupAuthAndDataListeners() {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    currentUserId = user.uid;
+                } else {
+                    try {
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                            currentUserId = auth.currentUser.uid;
+                        } else {
+                            const anonUser = await signInAnonymously(auth);
+                            currentUserId = anonUser.user.uid;
+                        }
+                    } catch (error) {
+                        console.error("Giriş yapılırken hata oluştu:", error);
+                        currentUserId = 'anonymous-' + crypto.randomUUID(); 
+                    }
+                }
+                
+                authIsReady = true; 
+                // Auth hazır olduğunda slotları ve kullanıcı kayıt durumunu izlemeye başla
+                if (currentUserId) {
+                    setupSlotListener();
+                    setupUserRegistrationListener();
+                } else {
+                    if(loadingIndicator) loadingIndicator.textContent = "Hata: Kullanıcı oturumu başlatılamadı.";
+                }
+            });
+        }
+        
+        // Kullanıcının Son Kayıt Zamanını İzleme
+        function setupUserRegistrationListener() {
+            if (!currentUserId || !db) return;
+
+            const userDocRef = doc(db, 'artifacts', appId, 'users', currentUserId, COLLECTION_NAME, 'registration');
+
+            onSnapshot(userDocRef, (docSnap) => {
+                if (docSnap.exists() && docSnap.data().lastRegistrationTime) {
+                    userLastRegistrationTime = docSnap.data().lastRegistrationTime.toDate();
+                } else {
+                    userLastRegistrationTime = null;
+                }
+                updateAlertMessage(); 
+            }, (error) => {
+                console.error("Kullanıcı kaydı dinlenirken hata:", error);
+                userLastRegistrationTime = null;
+            });
+        }
+        
+        // Günlük Sıfırlama Kuralını Kontrol Etme Fonksiyonu
+        function isUserEligibleToRegister() {
+            if (!userLastRegistrationTime) {
+                return { eligible: true, message: "" }; 
+            }
+            
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+
+            if (userLastRegistrationTime.getTime() < todayStart.getTime()) {
+                return { eligible: true, message: "" };
+            } else {
+                const lastRegTimeStr = userLastRegistrationTime.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+                return { 
+                    eligible: false, 
+                    message: `⚠️ Limit: Bugün (${lastRegTimeStr}) zaten bir slot aldın. Yeni slotlar 00:00'da sıfırlanır.` 
+                };
+            }
+        }
+
+        // Uyarı Mesajını Güncelle
+        function updateAlertMessage() {
+            if (!alertText || !alertMessage) return; // UI elementlerinin varlığını kontrol et
+            
+            const eligibility = isUserEligibleToRegister();
+            if (eligibility.eligible) {
+                alertText.textContent = "🔔 Her takım günde sadece 1 SLOT alabilir. Slotlar gece 00:00'da sıfırlanır. Hemen kaydol!";
+                alertMessage.classList.remove('bg-yellow-900', 'border-yellow-700', 'text-yellow-300');
+                alertMessage.classList.add('bg-neutral-800', 'border-neutral-700', 'text-neutral-200');
+            } else {
+                alertText.textContent = eligibility.message;
+                alertMessage.classList.remove('bg-neutral-800', 'border-neutral-700', 'text-neutral-200');
+                alertMessage.classList.add('bg-yellow-900', 'border-yellow-700', 'text-yellow-300');
+            }
+            alertMessage.classList.remove('hidden');
+        }
+
+
+        // --- Slot Yönetimi ---
+
+        // Slotların güncel durumunu Firebase'den dinle
+        function setupSlotListener() {
+            if (!db) return;
+            const q = collection(db, 'artifacts', appId, 'public', 'data', COLLECTION_NAME);
+
+            onSnapshot(q, (snapshot) => {
+                if(loadingIndicator) loadingIndicator.classList.add('hidden'); // Yükleyiciyi gizle
+                const slotsData = {};
+                snapshot.forEach(doc => {
+                    slotsData[doc.id] = doc.data();
+                });
+                updateStaticSlots(slotsData); // Statik slotları güncelle
+            }, (error) => {
+                console.error("Slot verileri dinlenirken hata:", error);
+                if(loadingIndicator) loadingIndicator.textContent = "Slotlar yüklenirken hata oluştu. Konsolu kontrol edin.";
+            });
+        }
+
+        // Statik Olarak Tanımlanan Slotları Güncelle
+        function updateStaticSlots(slotsData) {
+            for (let i = 1; i <= NUM_SLOTS; i++) {
+                const slotId = `slot-${i}`;
+                const card = document.getElementById(slotId);
+                const data = slotsData[slotId];
+                const isReserved = !!data && data.status === 'RESERVED';
+
+                if (card) {
+                    const slotInfoElement = card.querySelector('.slot-info'); // Slot bilgisi/aksiyonu içeren element
+
+                    // Sınıfları Temizle
+                    card.classList.remove('slot-reserved', 'cursor-not-allowed', 'hover:scale-[1.02]');
+                    card.classList.add('cursor-pointer'); // Varsayılan cursor
+
+                    if (isReserved) {
+                        // REZERVE EDİLMİŞ DURUM
+                        card.classList.add('slot-reserved', 'cursor-not-allowed');
+                        slotInfoElement.innerHTML = `
+                            <div class="text-sm font-bold text-neutral-200">${data.teamName || 'Bilinmiyor'}</div>
+                            <div class="text-xs text-neutral-400 mt-1">${data.instagram || 'Kayıtlı'}</div>
+                        `;
+                    } else {
+                        // BOŞ DURUM
+                        card.classList.add('hover:scale-[1.02]');
+                        slotInfoElement.innerHTML = `<div class="slot-action">TIKLA</div>`;
+                    }
+                    
+                    // Olay dinleyiciyi yeniden kurmak yerine, handleSlotClick'in içindeki kontrol yeterli
+                    // Ancak tıklama olayını her kart için bir kez burada tanımlayalım (main'de de yapılabilir)
+                    if (!card.hasClickListener) {
+                        card.addEventListener('click', () => handleSlotClick(slotId, isReserved));
+                        card.hasClickListener = true;
+                    }
+                }
+            }
+        }
+
+        // Slot Tıklama Olayını Yönet
+        function handleSlotClick(slotId, isReserved) {
+            // Tıklama anındaki güncel rezervasyon durumunu kontrol et
+            const card = document.getElementById(slotId);
+            const isCardReserved = card.classList.contains('slot-reserved');
+
+            if (isCardReserved) {
+                showMessage("Bu slot zaten alınmış.", 'bg-red-900');
+                return;
+            }
+
+            const eligibility = isUserEligibleToRegister();
+            if (!eligibility.eligible) {
+                showMessage(eligibility.message, 'bg-red-900');
+                return;
+            }
+
+            currentSlotId = slotId;
+            modalTitle.textContent = `${slotId.toUpperCase().replace('-', ' ')} ALINIYOR`;
+            
+            slotForm.reset();
+            modalContainer.classList.remove('hidden');
+        }
+
+        // Slotu Kaydet
+        async function saveSlot(slotId, teamName, instagram) {
+            if (!currentUserId || !db) {
+                showMessage("Kullanıcı kimliği belirlenemedi veya veritabanı hazır değil.", 'bg-red-900');
+                return;
+            }
+
+            const slotDocRef = doc(db, 'artifacts', appId, 'public', 'data', COLLECTION_NAME, slotId);
+            const userDocRef = doc(db, 'artifacts', appId, 'users', currentUserId, COLLECTION_NAME, 'registration');
+            const now = Timestamp.now();
+
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const slotSnap = await transaction.get(slotDocRef);
+                    
+                    if (slotSnap.exists() && slotSnap.data().status === 'RESERVED') {
+                        throw "Bu slot az önce başka bir kullanıcı tarafından alındı. Lütfen başka bir slot seçin.";
+                    }
+                    
+                    const eligibility = isUserEligibleToRegister();
+                    if (!eligibility.eligible) {
+                        throw "Günlük kayıt limitini doldurdunuz. Yeni slotlar 00:00'da açılacaktır.";
+                    }
+
+                    // Kayıt İşlemlerini Yap
+                    transaction.set(slotDocRef, {
+                        status: 'RESERVED',
+                        teamName: teamName,
+                        instagram: instagram,
+                        registeredBy: currentUserId,
+                        registrationTime: now
+                    });
+
+                    // Kullanıcı Kayıt Belgesini Güncelle 
+                    transaction.set(userDocRef, {
+                        lastRegistrationTime: now,
+                        lastRegisteredSlot: slotId
+                    }, { merge: true });
+                });
+
+                showMessage("🎉 Slot başarıyla alındı!", 'bg-green-700');
+                modalContainer.classList.add('hidden');
+                
+            } catch (error) {
+                console.error("Slot kaydı başarısız:", error);
+                const errorMessage = typeof error === 'string' ? error : "Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.";
+                showMessage(`Hata: ${errorMessage}`, 'bg-red-700');
+            }
+        }
+
+
+        // --- UI ve Yardımcı Fonksiyonlar ---
+        
+        function setupEventListeners() {
+            if (slotForm) {
+                slotForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const teamName = document.getElementById('team-name').value.trim();
+                    const instagram = document.getElementById('instagram').value.trim();
+        
+                    if (teamName && instagram && currentSlotId) {
+                        saveSlot(currentSlotId, teamName, instagram);
+                    } else {
+                        showMessage("Lütfen tüm alanları doldurun.", 'bg-red-700');
+                    }
+                });
+            }
+
+            if (modalClose) modalClose.addEventListener('click', () => modalContainer.classList.add('hidden'));
+            if (formCancel) formCancel.addEventListener('click', () => modalContainer.classList.add('hidden'));
+
+            // Statik slotlar için tıklama dinleyicilerini burada da kurabiliriz, ancak updateStaticSlots içinde kurmak daha güvenli.
+        }
+
+        // Basit Mesaj Gösterimi
+        function showMessage(text, colorClass = 'bg-neutral-700', duration = 3000) {
+            const tempAlert = document.createElement('div');
+            tempAlert.className = `fixed bottom-4 left-1/2 -translate-x-1/2 px-5 py-3 rounded-lg text-white font-medium shadow-xl transition-all duration-300 z-50 ${colorClass}`;
+            tempAlert.textContent = text;
+            document.body.appendChild(tempAlert);
+            
+            setTimeout(() => {
+                tempAlert.classList.add('opacity-0');
+                tempAlert.addEventListener('transitionend', () => tempAlert.remove());
+            }, duration);
+        }
+
+        // Geri Sayım Fonksiyonu
+        function updateCountdown() {
+            if (!countdownElement) return; // Countdown elementi yoksa dur
+
+            const now = new Date();
+            const midnight = new Date(now);
+            // Bir sonraki günün 00:00:00'ını hedefle
+            midnight.setHours(24, 0, 0, 0); 
+
+            const diff = midnight.getTime() - now.getTime();
+            
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            const formatTime = (t) => String(t).padStart(2, '0');
+            
+            countdownElement.textContent = `${formatTime(hours)}:${formatTime(minutes)}:${formatTime(seconds)}`;
+
+            if (diff < 0) {
+                // Sıfırlama gerçekleşti, yenile
+                setTimeout(() => window.location.reload(), 1000); 
+            }
+        }
+
+        // Uygulamayı Başlat (DOM yüklendiğinde main fonksiyonunu çağır)
+        window.onload = main;
+
+    </script>
+</body>
+</html>
